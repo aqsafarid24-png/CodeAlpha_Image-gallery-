@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Responsive Image Gallery</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --card:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#38bdf8;
+      --ring:rgba(56,189,248,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial,sans-serif;
+      background:linear-gradient(180deg,#0b0f14 0%,#0f172a 100%);
+      color:var(--text);
+    }
+
+    /* Container */
+    .wrapper{max-width:1200px;margin:0 auto;padding:24px}
+    .header{display:flex;flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between;margin-bottom:18px}
+    .title{font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:.3px}
+
+    /* Search + Filters */
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .filters{display:flex;flex-wrap:wrap;gap:8px}
+    button, .chip{appearance:none;border:0;cursor:pointer}
+    .chip{
+      padding:8px 12px;border-radius:999px;background:#111827; color:#cbd5e1;
+      transition:transform .15s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
+    }
+    .chip:hover{transform:translateY(-1px)}
+    .chip.active{background:var(--accent);color:#00111a;box-shadow:0 0 0 6px var(--ring)}
+
+    .search{position:relative}
+    .search input{
+      background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px 14px 10px 40px;color:var(--text);
+      outline:none;min-width:240px;transition:box-shadow .2s ease, border .2s ease
+    }
+    .search input:focus{box-shadow:0 0 0 6px var(--ring);border-color:#334155}
+    .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.6}
+
+    /* Gallery Grid */
+    .grid{
+      display:grid; gap:12px; grid-template-columns: repeat(1, 1fr);
+    }
+    @media(min-width:520px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(min-width:820px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+    .card{position:relative; overflow:hidden; border-radius:16px; background:var(--card); aspect-ratio:1/1; display:block}
+    .thumb{width:100%;height:100%;object-fit:cover; display:block; filter:saturate(1.05)}
+
+    /* Hover effects */
+    .card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.55));opacity:0;transition:opacity .25s ease}
+    .meta{position:absolute;left:10px;bottom:10px;z-index:2;font-size:12px;color:#cbd5e1;opacity:0;transform:translateY(8px);transition:all .25s ease}
+    .card:hover .thumb{transform:scale(1.05); filter:saturate(1.2)}
+    .card:hover::after{opacity:1}
+    .card:hover .meta{opacity:1;transform:translateY(0)}
+    .thumb{transition:transform .35s cubic-bezier(.2,.8,.2,1), filter .35s ease}
+
+    /* Lightbox */
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:50}
+    .lightbox.open{display:flex}
+    .lightbox-content{position:relative;max-width:min(92vw,1200px);max-height:86vh}
+    .lightbox img{max-width:100%;max-height:86vh;border-radius:16px;display:block}
+
+    .nav{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:10px}
+    .nav button{
+      background:rgba(17,24,39,.7);border:1px solid #334155;border-radius:999px;width:44px;height:44px;display:grid;place-items:center;color:#e2e8f0;font-size:18px
+    }
+    .nav button:focus{outline:none;box-shadow:0 0 0 6px var(--ring)}
+    .nav.prev{left:-60px}
+    .nav.next{right:-60px}
+    @media(max-width:640px){.nav.prev{left:-6px}.nav.next{right:-6px}}
+
+    .close-btn{
+      position:absolute;top:-54px;right:0;background:rgba(17,24,39,.7);border:1px solid #334155;border-radius:999px;width:44px;height:44px;display:grid;place-items:center;color:#e2e8f0
+    }
+
+    /* Smooth show/hide */
+    .fade-enter{animation:fadeIn .25s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+
+    /* Hidden utility */
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="title">✨ Responsive Image Gallery</div>
+      <div class="controls">
+        <div class="filters" role="tablist" aria-label="Gallery filters">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="nature">Nature</button>
+          <button class="chip" data-filter="city">City</button>
+          <button class="chip" data-filter="people">People</button>
+          <button class="chip" data-filter="animals">Animals</button>
+        </div>
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
+          <input id="search" type="search" placeholder="Search by title..." aria-label="Search images by title" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div id="gallery" class="grid" aria-live="polite"></div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox" aria-modal="true" role="dialog" aria-label="Image viewer">
+    <div class="lightbox-content fade-enter">
+      <img id="lightbox-img" src="" alt="Selected image" />
+      <div class="nav prev"><button id="prevBtn" aria-label="Previous image">&#10094;</button></div>
+      <div class="nav next"><button id="nextBtn" aria-label="Next image">&#10095;</button></div>
+      <button id="closeBtn" class="close-btn" aria-label="Close viewer">✕</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Gallery Data (easily replace with your own) ---
+    const images = [
+      {src:"https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1200&auto=format&fit=crop", title:"Misty Mountains", category:"nature"},
+      {src:"https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop", title:"Forest Path", category:"nature"},
+      {src:"https://images.unsplash.com/photo-1467269204594-9661b134dd2b?q=80&w=1200&auto=format&fit=crop", title:"City Sunset", category:"city"},
+      {src:"https://images.unsplash.com/photo-1508057198894-247b23fe5ade?q=80&w=1200&auto=format&fit=crop", title:"Skyscrapers Glow", category:"city"},
+      {src:"https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop", title:"Portrait Smile", category:"people"},
+      {src:"https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1200&auto=format&fit=crop", title:"Golden Hour", category:"people"},
+      {src:"https://images.unsplash.com/photo-1518791841217-8f162f1e1131?q=80&w=1200&auto=format&fit=crop", title:"Curious Cat", category:"animals"},
+      {src:"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop", title:"Majestic Wolf", category:"animals"},
+      {src:"https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=1200&auto=format&fit=crop", title:"Ocean Cliffs", category:"nature"},
+      {src:"https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop", title:"Pine Trail", category:"nature"},
+      {src:"https://images.unsplash.com/photo-1460353581641-37baddab0fa2?q=80&w=1200&auto=format&fit=crop", title:"Night Streets", category:"city"},
+      {src:"https://images.unsplash.com/photo-1487412912498-0447578fcca8?q=80&w=1200&auto=format&fit=crop", title:"Friends", category:"people"}
+    ];
+
+    const gallery = document.getElementById('gallery');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const searchInput = document.getElementById('search');
+
+    let activeIndex = 0;
+    let currentFilter = 'all';
+
+    // Render gallery items
+    function render(items){
+      gallery.innerHTML = '';
+      items.forEach((item, index)=>{
+        const figure = document.createElement('figure');
+        figure.className = 'card';
+        figure.dataset.index = index;
+        figure.dataset.title = item.title.toLowerCase();
+        figure.dataset.category = item.category;
+        figure.innerHTML = `
+          <img class="thumb" src="${item.src}" alt="${item.title}" loading="lazy"/>
+          <figcaption class="meta">${item.title} • ${item.category}</figcaption>
+        `;
+        figure.addEventListener('click', ()=> openLightbox(index));
+        gallery.appendChild(figure);
+      });
+    }
+
+    // Initial render
+    render(images);
+
+    // Filtering
+    function applyFilter(){
+      const term = searchInput.value.trim().toLowerCase();
+      const filtered = images
+        .map((img, i)=> ({...img, _i:i}))
+        .filter(img => (currentFilter==='all' || img.category===currentFilter) && img.title.toLowerCase().includes(term));
+      render(filtered);
+      // remap indices for lightbox navigation to filtered set
+      gallery.querySelectorAll('.card').forEach((card, idx)=>{
+        card.dataset.index = filtered[idx]._i; // store original index
+      });
+    }
+
+    document.querySelectorAll('.chip').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilter();
+      });
+    });
+
+    searchInput.addEventListener('input', ()=> applyFilter());
+
+    // Lightbox functions
+    function openLightbox(index){
+      activeIndex = index;
+      lightboxImg.src = images[activeIndex].src;
+      lightbox.classList.add('open');
+      document.body.style.overflow='hidden';
+    }
+    function closeLightbox(){
+      lightbox.classList.remove('open');
+      document.body.style.overflow='';
+    }
+    function showNext(step=1){
+      activeIndex = (activeIndex + step + images.length) % images.length;
+      lightboxImg.classList.remove('fade-enter');
+      void lightboxImg.offsetWidth; // restart animation
+      lightboxImg.src = images[activeIndex].src;
+      lightboxImg.classList.add('fade-enter');
+    }
+
+    // Event bindings
+    nextBtn.addEventListener('click', ()=> showNext(1));
+    prevBtn.addEventListener('click', ()=> showNext(-1));
+    closeBtn.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e)=>{ if(e.target===lightbox) closeLightbox(); });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e)=>{
+      if(!lightbox.classList.contains('open')) return;
+      if(e.key==='Escape') closeLightbox();
+      if(e.key==='ArrowRight') showNext(1);
+      if(e.key==='ArrowLeft') showNext(-1);
+    });
+
+    // Touch swipe for mobile
+    let startX = null;
+    lightbox.addEventListener('touchstart', (e)=>{ startX = e.touches[0].clientX; }, {passive:true});
+    lightbox.addEventListener('touchend', (e)=>{
+      if(startX===null) return; const dx = e.changedTouches[0].clientX - startX; startX=null;
+      if(Math.abs(dx) > 40){ dx<0 ? showNext(1) : showNext(-1); }
+    });
+
+  </script>
+</body>
+</html>
